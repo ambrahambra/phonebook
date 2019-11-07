@@ -1,0 +1,9 @@
+[
+  {
+    "id": 1,
+    "firstName": "testName",
+    "secondName": "testSecondName",
+    "email": "test@test.ru",
+    "bDay": "18.10"
+  }
+]

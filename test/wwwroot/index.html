@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <!-- -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+    <style>
+        .add{
+            height: 300px;
+        }
+        .warn{
+            background: #ffb23a;
+        }
+        .search{
+            display: flex;
+            margin-bottom: 20px;
+        }
+        .btn-search{
+            margin-left: 10px;
+        }
+        .list-group{
+            margin-bottom: 20px;
+        }
+        .modal-btn{
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+        }
+        .modal-mask {
+            position: fixed;
+            z-index: 9998;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, .5);
+            display: table;
+            transition: opacity .3s ease;
+        }
+
+        .modal-wrapper {
+            display: table-cell;
+            vertical-align: middle;
+        }
+
+        .modal-container {
+            width: 500px;
+            margin: 0px auto;
+            padding: 20px 30px;
+            background-color: #fff;
+            border-radius: 2px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, .33);
+            transition: all .3s ease;
+            font-family: Helvetica, Arial, sans-serif;
+        }
+
+        .modal-header h3 {
+            margin-top: 0;
+        }
+
+        .modal-body {
+            margin: 20px 0;
+        }
+
+        .modal-default-button {
+            float: right;
+        }
+        
+        .modal-enter {
+            opacity: 0;
+        }
+
+        .modal-leave-active {
+            opacity: 0;
+        }
+
+        .modal-enter .modal-container,
+        .modal-leave-active .modal-container {
+            -webkit-transform: scale(1.1);
+            transform: scale(1.1);
+        }
+
+    </style>
+</head>
+<body>
+<header>
+
+</header>
+<div class="container">
+    <div id="app">
+        <div>
+            <h1>Contacts</h1>
+            <div class="search">
+                <input v-model="searchKey" type="text" placeholder="search" class="form-control col-md-8">
+                <button type="submit" class="btn btn-primary btn-search" @click="findContacts">Search</button>
+                
+                <button id="show-modal" @click="showModal = true" class="btn btn-primary btn-search">Add Contact</button>
+                <modal v-if="showModal" @close="showModal = false">
+                    <h3 v-show="!edit" slot="header">Add Contact</h3>
+                    <h3 v-show="edit" slot="header">Update Contact</h3>
+                    <form slot="body" action="#" @submit.prevent="edit ? updateContact(contact.id) : createContact()">
+                        <div class="form-group">
+                            <label>firstName</label>
+                            <input v-model="contact.firstName" type="text" name="firstName" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>secondName</label>
+                            <input v-model="contact.secondName" type="text" name="secondName" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Email</label>
+                            <input v-model="contact.email" type="text" name="email" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Phone</label>
+                            <input v-model="contact.phone" type="text" name="phone" class="form-control">
+                        </div>
+                        <div class="form-group">
+                            <label>Birthday</label>
+                            <input v-model="contact.bDay" type="text" name="bDay" class="form-control">
+                        </div>
+                        <div class="form-group modal-btn">
+                            <button type="reset" class="btn btn-secondary" @click="showModal = false">Close</button>
+                            <button v-show="!edit" type="submit" class="btn btn-primary" @click="showModal = false">New Contact</button>
+                            <button v-show="edit" type="submit" class="btn btn-primary" @click="showModal = false">Update Contact</button>
+                        </div>
+                    </form>
+                </modal>
+            </div>
+            <table class="table">
+                <thead>
+                <tr>
+                    <th scope="col">First</th>
+                    <th scope="col">Last</th>
+                    <th scope="col">Email</th>
+                    <th scope="col">Phone</th>
+                    <th scope="col">Birthday</th>
+                    <th scope="col">Buttons</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr v-for="contact in displayedPosts " v-bind:class="{ warn: contact.isWarn }">
+                    <td>{{contact.firstName}}</td>
+                    <td>{{contact.secondName}}</td>
+                    <td>{{contact.email}}</td>
+                    <td>{{contact.phone}}</td>
+                    <td>{{contact.bDay}}</td>
+                    <td>
+                        <button @click="showContact(contact.id); showModal = true" class="btn btn-outline-secondary btn-xs">Edit</button>
+                        <button @click="deleteContact(contact.id)" class="btn btn-danger btn-xs">Delete</button>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+            <div class="clearfix btn-group col-md-2 offset-md-5 ">
+                <button type="button" class="btn btn-sm btn-outline-primary" v-if="page != 1" @click="page--"> << </button>
+                <button type="button" class="btn btn-sm btn-outline-primary " v-for="pageNumber in pages.slice(page-1, page+5)" @click="page = pageNumber"> {{pageNumber}} </button>
+                <button type="button" @click="page++" v-if="page < pages.length" class="btn btn-sm btn-outline-primary"> >> </button>
+            </div>
+            
+        </div>
+    </div>
+</div>
+<footer>
+
+</footer>
+</body>
+<script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+<script src="https://unpkg.com/vue"></script>
+
+
+<script >
+    Vue.component('modal', {
+        template: '#modal-template'
+    });
+    
+    new Vue({
+        el: "#app",
+    
+        data: function(){
+            return {
+                showModal: false,
+                edit:false,
+                post:[],
+                contact:{
+                    id:'',
+                    firstName:'',
+                    secondName:'',
+                    email:'',
+                    phone:'',
+                    bDay:'',
+                    isWarn:''
+                },
+                page: 1,
+                perPage: 8,
+                pages: [],
+                searchKey: '',
+                reservePost: []
+            }
+        },
+        watch: {
+            post: function() {
+                this.setPages();
+            },
+            searchKey: function () {
+                self = this;
+                if (self.searchKey == '') {
+                    self.fetchContactList();
+                }
+            }
+        },
+        computed:{
+            displayedPosts: function() {
+                    return this.paginate(this.post);
+                
+            }
+        },
+        mounted: function(){
+            console.log('Contacts Component Loaded...');
+            this.fetchContactList();
+            
+        },
+        methods: {
+            setPages: function() {
+                let numberOfPages = Math.ceil(this.post.length / this.perPage);
+                if(numberOfPages > this.pages.length) {
+                    index = this.pages.length+1;
+                    for (index ; index <= numberOfPages; index++) {
+                        this.pages.push(index);
+                    }
+                }else{
+                    this.pages = [];
+                    index = 1;
+                    for (index ; index <= numberOfPages; index++) {
+                        this.pages.push(index);
+                    }
+                }
+                
+            },
+            paginate: function(posts) {
+                let page = this.page;
+                let perPage = this.perPage;
+                let from = (page * perPage) - perPage;
+                let to = (page * perPage);
+                return  this.post.slice(from, to);
+            },
+            fetchContactList:function(){
+                console.log('Fetching contacts...');
+                axios.get('http://localhost:5000/api/phonebook')
+                    .then((response) => {
+                    console.log(response.data);
+                    this.post = response.data;
+                    this.checkBDay();
+                }).catch((error) => {
+                    console.log(error);
+            });
+                
+            },
+            createContact: function(){
+                console.log('Creating contact...');
+                let self = this;
+                axios.post('http://localhost:5000/api/phonebook', this.contact)
+                    .then(function(){
+                        self.contact.firstName = '';
+                        self.contact.secondName = '';
+                        self.contact.email = '';
+                        self.contact.phone = '';
+                        self.contact.bDay = '';
+                        self.edit = false;
+                        self.fetchContactList();
+                    })
+                    .catch(function(error){
+                        console.log(error);
+                    });
+            },
+            showContact: function(id){
+                let self = this;
+                axios.get('http://localhost:5000/api/phonebook/'+id)
+                    .then(function(response){
+                        self.contact.id = response.data.id;
+                        self.contact.firstName = response.data.firstName;
+                        self.contact.secondName = response.data.secondName;
+                        self.contact.email = response.data.email;
+                        self.contact.phone = response.data.phone;
+                        self.contact.bDay = response.data.bDay;
+                    })
+                self.edit = true;
+            },
+            updateContact: function(id){
+                console.log('Updating contact '+id+'...');
+                let self = this;
+                let params =Object.assign({}, self.contact);
+                axios.put('http://localhost:5000/api/phonebook/'+id, params)
+                    .then(function(){
+                        self.contact.firstName = '';
+                        self.contact.secondName = '';
+                        self.contact.email = '';
+                        self.contact.phone = '';
+                        self.contact.bDay = '';
+                        self.edit = false;
+                        self.fetchContactList();
+                    })
+                    .catch(function(error){
+                        console.log(error);
+                    });
+            },
+            deleteContact: function(id){
+                let self = this;
+                axios.delete('http://localhost:5000/api/phonebook/'+id)
+                    .then(function(response){
+                        self.fetchContactList();
+                    })
+                    .catch(function(error){
+                        console.log(error);
+                    });
+            },
+            checkBDay: function () {
+                let self = this;
+                var date = new Date();
+                var nowDay = date.getDate();
+                var nowMonth = date.getMonth() + 1;
+                
+                self.post.forEach(function(item) {
+                    var mas = item.bDay.split(".");
+                    var day = parseInt(mas[0]);
+                    var month = parseInt(mas[1]);
+                    if (day == nowDay && month == nowMonth){
+                        item.isWarn = true;
+                    }
+                });
+            },
+            findContacts: function () {
+                let self = this;
+                self.reservePost = self.post;
+                mas = self.searchKey.split(' ');
+                if (self.searchKey !== ''){
+                    var pos = self.post.filter(function (item) {
+                        firstSecond = item.firstName + " " + item.secondName;
+                        secondFirst = item.secondName + " " + item.firstName;
+                        if (mas.length != 2){
+                            if (item.firstName.toLowerCase() == self.searchKey.toLowerCase() || item.secondName.toLowerCase() == self.searchKey.toLowerCase())
+                                return item;
+                        }else {
+                            if (firstSecond.toLowerCase() == self.searchKey.toLowerCase() || secondFirst.toLowerCase() == self.searchKey.toLowerCase())
+                                return item;
+                        }
+                        
+                    });
+                    self.post = pos;
+                    self.setPages();
+                }
+            }
+        }
+    });
+</script>
+<script type="text/x-template" id="modal-template">
+    <transition name="modal">
+        <div class="modal-mask">
+            <div class="modal-wrapper">
+                <div class="modal-container">
+
+                    <div class="modal-header">
+                        <slot name="header">
+                            default header
+                        </slot>
+                    </div>
+
+                    <div class="modal-body">
+                        <slot name="body">
+                            default body
+                        </slot>
+                    </div>
+
+                    
+                </div>
+            </div>
+        </div>
+    </transition>
+</script>
+</html>
